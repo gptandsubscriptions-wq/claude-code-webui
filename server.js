@@ -199,28 +199,42 @@ function createSession(ws, payload) {
     if (fs.existsSync(settingsPath)) {
       const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
       envVars = { ...settings.env };
-      // Keep z.ai API endpoint
+      // Claude Code CLI expects ANTHROPIC_API_KEY, ensure both are set
+      if (envVars.ANTHROPIC_AUTH_TOKEN && !envVars.ANTHROPIC_API_KEY) {
+        envVars.ANTHROPIC_API_KEY = envVars.ANTHROPIC_AUTH_TOKEN;
+      }
+      console.log('Loaded settings from /home/claude/.claude/settings.json');
     }
   } catch (e) {
     console.log('Could not read settings:', e.message);
   }
 
+  // Debug: log the auth token being used
+  console.log('Auth token (first 20 chars):', envVars.ANTHROPIC_AUTH_TOKEN?.slice(0, 20) || 'none');
+  console.log('API key (first 20 chars):', envVars.ANTHROPIC_API_KEY?.slice(0, 20) || 'none');
+  console.log('Base URL:', envVars.ANTHROPIC_BASE_URL || 'default');
+
+  // Create the full environment
+  const ptyEnv = {
+    ...process.env,
+    HOME: '/home/claude',
+    ...envVars
+  };
+
+  // Debug: log key env vars that will be passed to PTY
+  console.log('PTY will have ANTHROPIC_AUTH_TOKEN:', ptyEnv.ANTHROPIC_AUTH_TOKEN?.slice(0, 20) + '...' || 'none');
+  console.log('PTY will have ANTHROPIC_API_KEY:', ptyEnv.ANTHROPIC_API_KEY?.slice(0, 20) + '...' || 'none');
+  console.log('PTY will have ANTHROPIC_BASE_URL:', ptyEnv.ANTHROPIC_BASE_URL || 'none');
+  console.log('PTY will have Z_AI_API_KEY:', ptyEnv.Z_AI_API_KEY?.slice(0, 20) + '...' || 'none');
+
   // Create a PTY - run claude with all settings from environment
   const ptyProcess = pty.spawn('claude', ['--dangerously-skip-permissions'], {
     name: 'xterm-color',
     cwd: cwd,
-    env: {
-      ...process.env,
-      HOME: '/home/claude',
-      ...envVars
-    },
+    env: ptyEnv,
     cols: 80,
     rows: 24
   });
-
-  // Debug: log the auth token being used
-  console.log('Auth token (first 20 chars):', envVars.ANTHROPIC_AUTH_TOKEN?.slice(0, 20) || 'none');
-  console.log('Base URL:', envVars.ANTHROPIC_BASE_URL || 'default');
 
   const session = {
     id: sessionId,
@@ -228,7 +242,8 @@ function createSession(ws, payload) {
     status: 'running',
     createdAt: new Date().toISOString(),
     pty: ptyProcess,
-    history: []
+    history: [],  // Stores terminal output for reconnect persistence
+    historySize: 0  // Track total size to limit memory usage
   };
 
   sessions.set(sessionId, session);
@@ -239,8 +254,15 @@ function createSession(ws, payload) {
   }
   connections.get(sessionId).add(ws);
 
-  // Forward PTY output to all connected clients
+  // Forward PTY output to all connected clients and store in history
   ptyProcess.onData((data) => {
+    // Store in history (limit to ~100KB to prevent memory issues)
+    const MAX_HISTORY_SIZE = 100 * 1024;
+    if (session.historySize + data.length < MAX_HISTORY_SIZE) {
+      session.history.push(data);
+      session.historySize += data.length;
+    }
+
     broadcastToSession(sessionId, {
       type: 'output',
       payload: {
@@ -313,9 +335,15 @@ function attachSession(ws, sessionId) {
   }
   connections.get(sessionId).add(ws);
 
+  const session = sessions.get(sessionId);
+
   ws.send(JSON.stringify({
     type: 'attached',
-    payload: { sessionId }
+    payload: {
+      sessionId,
+      // Send history buffer for session persistence
+      history: session?.history || []
+    }
   }));
 }
 

@@ -75,6 +75,12 @@ function handleMessage(message) {
       if (message.payload.uploads) {
         updateUploadsList(message.payload.uploads);
       }
+      // If there are existing sessions, auto-attach to the first one
+      if (message.payload.sessions && message.payload.sessions.length > 0 && !activeSessionId) {
+        const firstSession = message.payload.sessions[0];
+        debug('Auto-attaching to first session:', firstSession.id);
+        switchToSession(firstSession.id);
+      }
       break;
 
     case 'session_created':
@@ -110,6 +116,17 @@ function handleMessage(message) {
 
     case 'attached':
       debug('Attached to session:', message.payload.sessionId);
+      // Handle history for session persistence
+      if (message.payload.history && message.payload.history.length > 0) {
+        const term = terminals.get(message.payload.sessionId);
+        if (term) {
+          // Write all history to the terminal
+          message.payload.history.forEach(data => {
+            term.write(data);
+          });
+          debug(`Restored ${message.payload.history.length} history chunks`);
+        }
+      }
       break;
 
     default:
