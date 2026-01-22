@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code WebUI</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+</head>
+<body>
+  <!-- Top Navigation -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <span>Claude Code</span>
+      </div>
+    </div>
+    <div class="nav-center">
+      <a href="#" class="nav-item" data-page="dashboard">Dashboard</a>
+      <a href="#" class="nav-item" data-page="chat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Chat
+      </a>
+      <a href="#" class="nav-item" data-page="sessions">Sessions</a>
+      <a href="#" class="nav-item" data-page="projects">Projects</a>
+      <a href="#" class="nav-item" data-page="files">Files</a>
+      <a href="#" class="nav-item active" data-page="terminal">Terminal</a>
+    </div>
+    <div class="nav-right">
+      <button class="logout-btn">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Terminal Manager -->
+    <section class="terminal-manager">
+      <button class="new-terminal-btn" id="newTerminalBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        + New Terminal
+      </button>
+
+      <!-- Terminal Tabs -->
+      <div class="terminal-tabs" id="terminalTabs">
+        <!-- Tabs will be dynamically added here -->
+      </div>
+    </section>
+
+    <!-- Terminal Container -->
+    <section class="terminal-container">
+      <!-- Active Terminal View -->
+      <div class="terminal-view" id="terminalView">
+        <div class="terminal-header">
+          <div class="terminal-info">
+            <span class="terminal-id" id="terminalId">No active terminal</span>
+            <span class="terminal-cwd" id="terminalCwd"></span>
+          </div>
+          <div class="terminal-actions">
+            <button class="action-btn" id="attachBtn" title="Attach">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </button>
+            <button class="action-btn" id="clearBtn" title="Clear">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+            <button class="action-btn danger" id="closeBtn" title="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Output -->
+        <div class="terminal-output" id="terminalOutput">
+          <div class="welcome-screen">
+            <div class="welcome-box">
+              <div class="welcome-header">
+                <h2>Claude Code v2.1.6</h2>
+              </div>
+              <div class="welcome-content">
+                <div class="welcome-left">
+                  <div class="welcome-greeting">
+                    <svg class="robot-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="10" rx="2"/>
+                      <circle cx="12" cy="5" r="2"/>
+                      <path d="M12 7v4"/>
+                      <line x1="8" y1="16" x2="8" y2="16"/>
+                      <line x1="16" y1="16" x2="16" y2="16"/>
+                    </svg>
+                    <h3>Welcome back!</h3>
+                  </div>
+                  <p class="model-info">Sonnet 4.5 · API Usage Billing</p>
+                  <p class="cwd-info" id="welcomeCwd">/home/saunalserver</p>
+                </div>
+                <div class="welcome-right">
+                  <h4>Tips for getting started</h4>
+                  <ul class="tips-list">
+                    <li>Each terminal is a fresh <code>claude --dangerously-skip-permissions</code> session</li>
+                    <li>Click <strong>+ New Terminal</strong> to start a new session</li>
+                    <li>Sessions persist even if you close the browser tab</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="welcome-footer">
+                <span class="activity-label">Recent activity</span>
+                <span class="activity-status">No recent activity</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Input -->
+        <div class="terminal-input-area" id="inputArea" style="display: none;">
+          <div class="input-line">
+            <span class="prompt">$</span>
+            <input
+              type="text"
+              class="terminal-input"
+              id="terminalInput"
+              placeholder="Type a command..."
+              autocomplete="off"
+              autofocus
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <h2>No Active Terminal</h2>
+        <p>Click <strong>+ New Terminal</strong> to start a Claude Code session</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+services:
+  claude-code-webui:
+    build: .
+    container_name: claude-code-webui
+    restart: unless-stopped
+    ports:
+      - "3420:3420"
+    volumes:
+      # Mount home directory to access projects
+      - /home/saunalserver:/workspace
+      # Mount Claude Code config for authentication
+      - ~/.claude:/root/.claude:ro
+    environment:
+      - PORT=3420
+      - HOME=/workspace
+    working_dir: /workspace/projects/claude-code-webui
+    networks:
+      - claude-network
+
+networks:
+  claude-network:
+    driver: bridge
