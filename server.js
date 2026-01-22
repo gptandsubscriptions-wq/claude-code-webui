@@ -187,18 +187,40 @@ wss.on('connection', (ws, req) => {
 
 function createSession(ws, payload) {
   const sessionId = `term-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const cwd = payload?.cwd || process.env.HOME || '/home/saunalserver';
+  // Run in workspace directory - the actual project location
+  const cwd = payload?.cwd || '/home/claude/workspace';
 
   console.log(`Creating PTY session ${sessionId} in ${cwd}`);
 
-  // Create a PTY - run claude in interactive mode
+  // Read settings to pass all env vars to claude
+  let envVars = {};
+  try {
+    const settingsPath = '/home/claude/.claude/settings.json';
+    if (fs.existsSync(settingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      envVars = { ...settings.env };
+      // Keep z.ai API endpoint
+    }
+  } catch (e) {
+    console.log('Could not read settings:', e.message);
+  }
+
+  // Create a PTY - run claude with all settings from environment
   const ptyProcess = pty.spawn('claude', ['--dangerously-skip-permissions'], {
     name: 'xterm-color',
     cwd: cwd,
-    env: process.env,
+    env: {
+      ...process.env,
+      HOME: '/home/claude',
+      ...envVars
+    },
     cols: 80,
     rows: 24
   });
+
+  // Debug: log the auth token being used
+  console.log('Auth token (first 20 chars):', envVars.ANTHROPIC_AUTH_TOKEN?.slice(0, 20) || 'none');
+  console.log('Base URL:', envVars.ANTHROPIC_BASE_URL || 'default');
 
   const session = {
     id: sessionId,

@@ -5,15 +5,15 @@ services:
     restart: unless-stopped
     ports:
       - "3420:3420"
+    privileged: true
     volumes:
       # Mount home directory to access projects
-      - /home/saunalserver:/workspace
+      - /home/saunalserver:/home/claude/workspace
       # Mount Claude Code config for authentication
-      - ~/.claude:/root/.claude:ro
+      - ~/.claude:/home/claude/.claude
     environment:
       - PORT=3420
-      - HOME=/workspace
-    working_dir: /workspace/projects/claude-code-webui
+      - HOME=/home/claude
     networks:
       - claude-network
 

@@ -6,6 +6,7 @@ let activeSessionId = null;
 const sessions = new Map();
 const terminals = new Map(); // Store xterm.js Terminal instances per session
 const fitAddons = new Map(); // Store FitAddon instances
+const terminalContainers = new Map(); // Store DOM container elements per session
 
 // DOM Elements
 const tabContainer = document.getElementById('tabContainer');
@@ -125,6 +126,14 @@ function createTerminal(sessionId) {
     return terminals.get(sessionId);
   }
 
+  // Create a dedicated DOM container for this terminal
+  const containerDiv = document.createElement('div');
+  containerDiv.className = 'xterm-container';
+  containerDiv.dataset.sessionId = sessionId;
+  containerDiv.style.display = 'none'; // Hidden by default
+  terminalContainer.appendChild(containerDiv);
+  terminalContainers.set(sessionId, containerDiv);
+
   // Create new xterm.js terminal
   const term = new Terminal({
     cursorBlink: true,
@@ -201,6 +210,12 @@ function disposeTerminal(sessionId) {
   if (fitAddon) {
     fitAddons.delete(sessionId);
   }
+  // Remove the dedicated container
+  const containerDiv = terminalContainers.get(sessionId);
+  if (containerDiv && containerDiv.parentNode) {
+    containerDiv.parentNode.removeChild(containerDiv);
+  }
+  terminalContainers.delete(sessionId);
 }
 
 function handleOutput(sessionId, data) {
@@ -305,26 +320,44 @@ function updateTerminalView() {
   if (!activeSessionId || !session) {
     welcomeScreen.classList.remove('hidden');
     terminalView.classList.add('hidden');
+    // Hide all terminal containers
+    terminalContainers.forEach(container => {
+      container.style.display = 'none';
+    });
     return;
   }
 
   welcomeScreen.classList.add('hidden');
   terminalView.classList.remove('hidden');
 
+  // Hide all terminal containers first
+  terminalContainers.forEach(container => {
+    container.style.display = 'none';
+  });
+
   // Get or create terminal for this session
   let term = terminals.get(activeSessionId);
   if (!term) {
     term = createTerminal(activeSessionId);
 
-    // Clear the container and open terminal
-    terminalContainer.innerHTML = '';
-    term.open(terminalContainer);
+    // Get the dedicated container for this session
+    const containerDiv = terminalContainers.get(activeSessionId);
+    if (containerDiv) {
+      // Open terminal in its dedicated container
+      term.open(containerDiv);
 
-    // Fit to container
-    const fitAddon = fitAddons.get(activeSessionId);
-    if (fitAddon) {
-      fitAddon.fit();
+      // Fit to container
+      const fitAddon = fitAddons.get(activeSessionId);
+      if (fitAddon) {
+        fitAddon.fit();
+      }
     }
+  }
+
+  // Show this session's terminal container
+  const containerDiv = terminalContainers.get(activeSessionId);
+  if (containerDiv) {
+    containerDiv.style.display = 'block';
   }
 
   // Focus the terminal
@@ -347,7 +380,7 @@ function createNewSession() {
   sendToServer({
     type: 'create_session',
     payload: {
-      cwd: '/home/saunalserver'
+      cwd: '/home/claude/workspace'
     }
   });
 }
@@ -553,7 +586,8 @@ function setupEventListeners() {
     if (activeSessionId) {
       const fitAddon = fitAddons.get(activeSessionId);
       if (fitAddon) {
-        fitAddon.fit();
+        // Use requestAnimationFrame to avoid throttling issues
+        requestAnimationFrame(() => fitAddon.fit());
       }
     }
   });
