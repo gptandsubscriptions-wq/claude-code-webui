@@ -176,7 +176,7 @@ app.get('/api/uploads', (req, res) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Claude Code WebUI running on http://0.0.0.0:${PORT}`);
   console.log(`Access via Tailscale: http://100.96.197.39:${PORT}`);
-  console.log(`Workspace: /home/saunalserver`);
+  console.log(`Workspace: /home/saunalserver (same path in container and on host)`);
   console.log(`Upload TTL: 48 hours (in-memory storage)`);
 });
 
@@ -253,16 +253,16 @@ wss.on('connection', (ws, req) => {
 
 function createSession(ws, payload) {
   const sessionId = `term-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  // Inside container, workspace is at /home/claude/workspace (maps to host's /home/saunalserver)
-  const cwd = payload?.cwd || '/home/claude/workspace';
+  // Use same paths as host for consistency (mount now uses /home/saunalserver both inside and outside)
+  const cwd = payload?.cwd || '/home/saunalserver';
 
   console.log(`Creating PTY session ${sessionId} in ${cwd}`);
 
   // Read settings to pass all env vars to claude
   let envVars = {};
   try {
-    // Inside container, settings are at /home/claude/.claude/settings.json (mounted from host's ~/.claude)
-    const settingsPath = path.join('/home/claude', '.claude', 'settings.json');
+    // Settings are now at /home/saunalserver/.claude/settings.json (consistent with host)
+    const settingsPath = path.join('/home/saunalserver', '.claude', 'settings.json');
     if (fs.existsSync(settingsPath)) {
       const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
       envVars = { ...settings.env };
@@ -270,7 +270,7 @@ function createSession(ws, payload) {
       if (envVars.ANTHROPIC_AUTH_TOKEN && envVars.ANTHROPIC_API_KEY === envVars.ANTHROPIC_AUTH_TOKEN) {
         delete envVars.ANTHROPIC_API_KEY;
       }
-      console.log('Loaded settings from /home/claude/.claude/settings.json');
+      console.log('Loaded settings from /home/saunalserver/.claude/settings.json');
     }
   } catch (e) {
     console.log('Could not read settings:', e.message);
@@ -282,11 +282,11 @@ function createSession(ws, payload) {
   console.log('Base URL:', envVars.ANTHROPIC_BASE_URL || 'default');
   console.log('Z_AI_API_KEY (first 20 chars):', envVars.Z_AI_API_KEY?.slice(0, 20) || 'none');
 
-  // Create the full environment with correct HOME (inside container)
+  // Create the full environment with correct HOME (now consistent with host)
   const ptyEnv = {
     ...process.env,
-    HOME: '/home/claude',
-    USER: 'claude',
+    HOME: '/home/saunalserver',
+    USER: 'saunalserver',
     ...envVars
   };
 

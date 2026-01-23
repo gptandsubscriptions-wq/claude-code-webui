@@ -7,13 +7,15 @@ services:
       - "3420:3420"
     privileged: true
     volumes:
-      # Mount home directory to access projects
-      - /home/saunalserver:/home/claude/workspace
-      # Mount Claude Code config for authentication
-      - ~/.claude:/home/claude/.claude
+      # Mount home directory with SAME PATH inside container for consistency
+      # This makes paths work identically in browser and CLI sessions
+      - /home/saunalserver:/home/saunalserver
+      # Mount Claude Code config for authentication (to expected location)
+      - ~/.claude:/home/saunalserver/.claude
     environment:
       - PORT=3420
-      - HOME=/home/claude
+      - HOME=/home/saunalserver
+      - USER=saunalserver
     networks:
       - claude-network
 

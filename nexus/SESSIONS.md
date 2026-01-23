@@ -4,6 +4,38 @@
 
 ---
 
+## Session 2026-01-23 - Path Consistency Fix
+
+**Context**: Fixed path inconsistency between browser-based and CLI sessions
+
+**What We Did**:
+1. **Fixed Docker volume mounts**: Changed to use same path inside and outside container
+   - OLD: `/home/saunalserver:/home/claude/workspace` (different paths!)
+   - NEW: `/home/saunalserver:/home/saunalserver` (same paths!)
+2. **Updated server.js**: Changed all paths from `/home/claude/*` to `/home/saunalserver/*`
+   - Default cwd: `/home/claude/workspace` → `/home/saunalserver`
+   - Settings path: `/home/claude/.claude/settings.json` → `/home/saunalserver/.claude/settings.json`
+   - HOME environment: `/home/claude` → `/home/saunalserver`
+   - USER environment: `claude` → `saunalserver`
+3. **Updated docker-compose.yml**:
+   - Volume mount now uses identical paths
+   - Environment variables updated to match host
+
+**Why This Matters**:
+- Browser sessions and CLI sessions now use identical paths
+- Project paths like `/home/saunalserver/projects/` work the same in both environments
+- No more path translation or confusion when switching between browser and terminal
+
+**Key Changes**:
+- `docker-compose.yml` - Volume mounts and environment variables
+- `server.js` - Default cwd, settings path, HOME/USER environment
+
+**Follow-up**:
+- [ ] Rebuild container and test with new paths
+- [ ] Verify project-planner works correctly in browser sessions
+
+---
+
 ## Session 2026-01-22 (Afternoon - Part 3)
 
 **Context**: Production fixes and deployment
